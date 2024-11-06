@@ -49,15 +49,20 @@ class LBTMODSSpectrograph(spectrograph.Spectrograph):
         par['calibrations']['darkframe']['exprng'] = [999999, None]     # No dark frames
         par['calibrations']['pinholeframe']['exprng'] = [999999, None]  # No pinhole frames
         par['calibrations']['pixelflatframe']['exprng'] = [0, None]
+        par['calibrations']['slitless_pixflatframe']['exprng'] = [0, None]
         par['calibrations']['traceframe']['exprng'] = [0, None]
         par['calibrations']['arcframe']['exprng'] = [None, None]
         par['calibrations']['standardframe']['exprng'] = [1, 200]
-        par['scienceframe']['exprng'] = [200, None]
+        par['scienceframe']['exprng'] = [1, None]
 
         # Do not sigmaclip the arc frames for better Arc and better wavecalib
         par['calibrations']['arcframe']['process']['clip'] = False
         # Do not sigmaclip the tilt frames
         par['calibrations']['tiltframe']['process']['clip'] = False
+
+        # Set default processing for slitless_pixflat
+        #par['calibrations']['slitless_pixflatframe']['process']['scale_to_mean'] = True
+
 
         return par
 
@@ -79,7 +84,8 @@ class LBTMODSSpectrograph(spectrograph.Spectrograph):
         self.meta['exptime'] = dict(ext=0, card='EXPTIME')
         self.meta['airmass'] = dict(ext=0, card='AIRMASS')
         self.meta['dispname'] = dict(ext=0, card='GRATNAME')
-        self.meta['dichroic'] = dict(ext=0, card='FILTNAME')
+        #self.meta['filter'] = dict(ext=0, card='FILTNAME')
+        self.meta['dichroic'] = dict(ext=0, card='DICHNAME')
         self.meta['idname'] = dict(ext=0, card='IMAGETYP')
         self.meta['instrument'] = dict(ext=0, card='INSTRUME')
 
@@ -117,8 +123,9 @@ class LBTMODSSpectrograph(spectrograph.Spectrograph):
             and used to constuct the :class:`~pypeit.metadata.PypeItMetaData`
             object.
         """
-        # decker is not included because standards are usually taken with a 5" slit and arc using 0.8" slit
-        return ['dispname', 'binning' ]
+        # decker is not included because standards are usually taken with a 5" slit and arc using 0.6" slit
+        # the standards, science data and comparison lamp spectra should all be reduced together
+        return ['instrument', 'dichroic', 'dispname', 'binning']
 
     def raw_header_cards(self):
         """
@@ -138,7 +145,7 @@ class LBTMODSSpectrograph(spectrograph.Spectrograph):
             :obj:`list`: List of keywords from the raw data files that should
             be propagated in output files.
         """
-        return ['GRATNAME', 'CCDXBIN', 'CCDYBIN']
+        return ['INSTRUME', 'MASKNAME', 'DICHNAME', 'GRATNAME' 'CCDXBIN', 'CCDYBIN']
 
     def check_frame_type(self, ftype, fitstbl, exprng=None):
         """
@@ -160,14 +167,20 @@ class LBTMODSSpectrograph(spectrograph.Spectrograph):
             exposures in ``fitstbl`` that are ``ftype`` type frames.
         """
         good_exp = framematch.check_frame_exptime(fitstbl['exptime'], exprng)
-        if ftype in ['science', 'standard']:
+        if ftype in ['science']:
             return good_exp & (fitstbl['idname'] == 'OBJECT') & (fitstbl['ra'] != 'none') \
+                   & (fitstbl['dispname'] != 'Flat')
+        if ftype in ['standard']:
+            return good_exp & (fitstbl['idname'] == 'STD') & (fitstbl['ra'] != 'none') \
                    & (fitstbl['dispname'] != 'Flat')
         if ftype == 'bias':
             return good_exp  & (fitstbl['idname'] == 'BIAS')
-        if ftype in ['pixelflat', 'trace', 'illumflat']:
+        if ftype in ['trace', 'illumflat']:
             # Flats and trace frames are typed together
-            return good_exp  & (fitstbl['idname'] == 'FLAT') & (fitstbl['decker'] != 'Imaging')
+            return good_exp  & (fitstbl['idname'] == 'FLAT') & (fitstbl['decker'] != 'Imaging') & (fitstbl['dispname'] != 'Flat')
+        if ftype in ['slitless_pixflat']:
+            # Slitless Pixel Flats
+            return good_exp  & (fitstbl['idname'] == 'FLAT') & (fitstbl['decker'] == 'Imaging') & (fitstbl['dispname'] != 'Flat')
         if ftype in ['pinhole', 'dark']:
             # Don't type pinhole or dark frames
             return np.zeros(len(fitstbl), dtype=bool)
