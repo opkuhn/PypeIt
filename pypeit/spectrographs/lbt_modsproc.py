@@ -174,7 +174,7 @@ class LBTMODSSpectrograph(spectrograph.Spectrograph):
         if ftype in ['science']:
             return good_exp & (fitstbl['idname'] == 'OBJECT') & (fitstbl['ra'] != 'none') \
                    & (fitstbl['dispname'] != 'Flat')
-       if ftype in ['standard']:
+        if ftype in ['standard']:
             return good_exp & (fitstbl['idname'] == 'STD') & (fitstbl['ra'] != 'none') \
                    & (fitstbl['dispname'] != 'Flat')
         if ftype == 'bias':
@@ -256,7 +256,11 @@ class LBTMODSSpectrograph(spectrograph.Spectrograph):
         #nbias2 = 8240
 
         # allocate output array...
-        array = hdu[0].data.T * 1.0 ## Convert to float in order to get it processed with procimg.py
+        #array = hdu[0].data.T * 1.0 ## Convert to float in order to get it processed with procimg.py
+        # was getting an error in bspline/utilc.py l:180 solution arrays, datatype must be float64
+        # so changed typecast from *1.0 to astype(float). Unsure this really makes a difference, but code 
+        # did not error out. 
+        array = hdu[0].data.T.astype(float) ## Convert to float in order to get it processed with procimg.py
         rawdatasec_img = np.zeros_like(array, dtype=int)
         oscansec_img = np.zeros_like(array, dtype=int)
 
@@ -322,7 +326,10 @@ class LBTMODS1RSpectrograph(LBTMODSSpectrograph):
             det=1,
             dataext         = 0,
             specaxis        = 0,
-            specflip        = False,
+            #specflip        = False,
+            # While _raw_ MODS Red channel spectra require specflip=False, the spectral
+            # axis of the *otf spectra pre-processed by modsCCDRed has already been flipped.
+            specflip        = True,
             spatflip        = False,
             platescale      = 0.123,
             darkcurr        = 0.4,  # e-/pixel/hour
@@ -633,7 +640,10 @@ class LBTMODS2RSpectrograph(LBTMODSSpectrograph):
             det=1,
             dataext         = 0,
             specaxis        = 0,
-            specflip        = False,
+            #specflip        = False,
+            # While _raw_ MODS Red channel spectra require specflip=False, the spectral
+            # axis of the *otf spectra pre-processed by modsCCDRed has already been flipped.
+            specflip        = True,
             spatflip        = False,
             platescale      = 0.123,
             darkcurr        = 0.4,  # e-/pixel/hour
