@@ -240,8 +240,7 @@ class LBTMODSSpectrograph(spectrograph.Spectrograph):
         xbin, ybin = head['CCDXBIN'], head['CCDYBIN']
 
         #datasize = head['DETSIZE'] # Unbinned size of detector full array
-        datasize = "[1:"+str(naxis1)+",1:"+str(naxis2)+"]" # Size of image 
-        print(datasize, head['DETSIZE']) 
+        datasize = "[1:naxis1,1:naxis2]" # Size of image 
         _, nx_full, _, ny_full = np.array(parse.load_sections(datasize, fmt_iraf=False)).flatten()
 
         # allocate output array...
@@ -250,7 +249,7 @@ class LBTMODSSpectrograph(spectrograph.Spectrograph):
         # so changed typecast from *1.0 to astype(float). Unsure this really makes a difference, but code
         # did not error out.
         # 
-        array = hdu[0].data.T.astype(float) ## Convert to float in order to get it processed with procimg.py
+        array = hdu[0].data.T.astype(float64) ## Convert to float in order to get it processed with procimg.py
         #
         #
         rawdatasec_img = np.zeros_like(array, dtype=int)
@@ -363,18 +362,13 @@ class LBTMODS1RSpectrograph(LBTMODSSpectrograph):
         """
         par = super().default_pypeit_par()
 
-        # Processing steps
-        #turn_off = dict(use_illumflat=False, use_biasimage=False, use_overscan=False, use_pixelflat=False, 
-        #        use_specillum=False, trim=False)
-
-        #par.reset_all_processimages_par(**turn_off)
-
         par['flexure']['spec_method'] = 'boxcar'
 
         # 1D wavelength solution
         par['calibrations']['wavelengths']['sigdetect'] = 5.
         par['calibrations']['wavelengths']['rms_thresh_frac_fwhm'] = 0.09
         par['calibrations']['wavelengths']['fwhm'] = 10.
+        #par['calibrations']['wavelengths']['lamps'] = ['XeI','ArII','ArI','NeI','KrI']]
         par['calibrations']['wavelengths']['lamps'] = ['ArI','NeI','KrI','XeI']
         #par['calibrations']['wavelengths']['lamps'] = ['OH_MODS']
         par['calibrations']['wavelengths']['n_first'] = 3
@@ -382,7 +376,7 @@ class LBTMODS1RSpectrograph(LBTMODSSpectrograph):
 
         # slit
         par['calibrations']['slitedges']['sync_predict'] = 'nearest'
-        par['calibrations']['slitedges']['edge_thresh'] = 50.
+        par['calibrations']['slitedges']['edge_thresh'] = 100.
 
         # Set wave tilts order
         par['calibrations']['tilts']['spat_order'] = 5
@@ -393,7 +387,6 @@ class LBTMODS1RSpectrograph(LBTMODSSpectrograph):
         # Sensitivity function defaults
         par['sensfunc']['algorithm'] = 'IR'
         par['sensfunc']['IR']['telgridfile'] = 'TellPCA_3000_26000_R10000.fits'
-
 
         return par
 
@@ -417,9 +410,8 @@ class LBTMODS1RSpectrograph(LBTMODSSpectrograph):
         par = super().config_specific_par(scifile, inp_par=inp_par)
 
         if self.get_meta_value(scifile, 'dispname') == 'G670L':
-            par['calibrations']['wavelengths']['method'] = 'holy-grail'
-            #par['calibrations']['wavelengths']['method'] = 'full_template'
-            #par['calibrations']['wavelengths']['reid_arxiv'] = 'lbt_mods1rproc_red.fits'
+            par['calibrations']['wavelengths']['method'] = 'full_template'
+            par['calibrations']['wavelengths']['reid_arxiv'] = 'lbt_mods1r_red.fits'
 
         return par
 
@@ -478,7 +470,7 @@ class LBTMODS1RSpectrograph(LBTMODSSpectrograph):
 
 class LBTMODS1BSpectrograph(LBTMODSSpectrograph):
     """
-    Child to handle LBT/MODS1B specific code
+    Child to handle LBT/MODS1R specific code
     """
 
     name = 'lbt_mods1b'
@@ -547,7 +539,7 @@ class LBTMODS1BSpectrograph(LBTMODSSpectrograph):
 
         # slit
         par['calibrations']['slitedges']['sync_predict'] = 'nearest'
-        par['calibrations']['slitedges']['edge_thresh'] = 50.
+        par['calibrations']['slitedges']['edge_thresh'] = 100.
 
         # Set wave tilts order
         par['calibrations']['tilts']['spat_order'] = 5
@@ -578,8 +570,7 @@ class LBTMODS1BSpectrograph(LBTMODSSpectrograph):
             adjusted for configuration specific parameter values.
         """
         # Start with instrument wide
-        par = super().config_specific_par(scifile, inp_par=inp_par)
-        #par = super(LBTMODS1BSpectrograph, self).config_specific_par(scifile, inp_par=inp_par)
+        par = super(LBTMODS1BSpectrograph, self).config_specific_par(scifile, inp_par=inp_par)
 
         if self.get_meta_value(scifile, 'dispname') == 'G400L':
             par['calibrations']['wavelengths']['method'] = 'full_template'
@@ -636,7 +627,7 @@ class LBTMODS1BSpectrograph(LBTMODSSpectrograph):
 
 class LBTMODS2RSpectrograph(LBTMODSSpectrograph):
     """
-    Child to handle LBT/MODS2R specific code
+    Child to handle LBT/MODS1R specific code
     """
     name = 'lbt_mods2r'
     camera = 'MODS2R'
@@ -702,6 +693,7 @@ class LBTMODS2RSpectrograph(LBTMODSSpectrograph):
         par['calibrations']['wavelengths']['sigdetect'] = 5.
         par['calibrations']['wavelengths']['rms_thresh_frac_fwhm'] = 0.22
         par['calibrations']['wavelengths']['fwhm'] = 10.
+        #par['calibrations']['wavelengths']['lamps'] = ['XeI','ArII','ArI','NeI','KrI']]
         par['calibrations']['wavelengths']['lamps'] = ['ArI','NeI','KrI','XeI']
         #par['calibrations']['wavelengths']['lamps'] = ['OH_MODS']
         par['calibrations']['wavelengths']['n_first'] = 3
@@ -709,7 +701,7 @@ class LBTMODS2RSpectrograph(LBTMODSSpectrograph):
 
         # slit
         par['calibrations']['slitedges']['sync_predict'] = 'nearest'
-        par['calibrations']['slitedges']['edge_thresh'] = 50.
+        par['calibrations']['slitedges']['edge_thresh'] = 300.
 
         # Set wave tilts order
         par['calibrations']['tilts']['spat_order'] = 5
@@ -801,7 +793,7 @@ class LBTMODS2RSpectrograph(LBTMODSSpectrograph):
 
 class LBTMODS2BSpectrograph(LBTMODSSpectrograph):
     """
-    Child to handle LBT/MODS2B specific code
+    Child to handle LBT/MODS1R specific code
     """
     name = 'lbt_mods2b'
     camera = 'MODS2B'
@@ -870,7 +862,7 @@ class LBTMODS2BSpectrograph(LBTMODSSpectrograph):
 
         # slit
         par['calibrations']['slitedges']['sync_predict'] = 'nearest'
-        par['calibrations']['slitedges']['edge_thresh'] = 50.
+        par['calibrations']['slitedges']['edge_thresh'] = 100.
 
         # Set wave tilts order
         par['calibrations']['tilts']['spat_order'] = 5
@@ -901,7 +893,7 @@ class LBTMODS2BSpectrograph(LBTMODSSpectrograph):
             adjusted for configuration specific parameter values.
         """
         # Start with instrument wide
-        par = super().config_specific_par(scifile, inp_par=inp_par)
+        par = super(LBTMODS2BSpectrograph, self).config_specific_par(scifile, inp_par=inp_par)
 
         if self.get_meta_value(scifile, 'dispname') == 'G400L':
             par['calibrations']['wavelengths']['method'] = 'full_template'
@@ -972,7 +964,7 @@ class LBTMODS2BSpectrograph(LBTMODSSpectrograph):
 
 class LBTMODS1RSpectrographProc(LBTMODSSpectrograph):
     """
-    Child to handle LBT/MODS1R specific code for pre-processed images
+    Child to handle LBT/MODS1R specific code
     """
     name = 'lbt_mods1r_proc'
     camera = 'MODS1R'
@@ -1035,24 +1027,21 @@ class LBTMODS1RSpectrographProc(LBTMODSSpectrograph):
         """
         par = super().default_pypeit_par()
 
-        # Processing steps
-
-        par.reset_all_processimages_par(use_illumflat=False, use_biasimage=False, use_overscan=False, 
-                 use_pixelflat=False, use_specillum=False, trim=False)
-
         par['flexure']['spec_method'] = 'boxcar'
 
         # 1D wavelength solution
         par['calibrations']['wavelengths']['sigdetect'] = 5.
         par['calibrations']['wavelengths']['rms_thresh_frac_fwhm'] = 0.09
         par['calibrations']['wavelengths']['fwhm'] = 10.
+        #par['calibrations']['wavelengths']['lamps'] = ['XeI','ArII','ArI','NeI','KrI']]
         par['calibrations']['wavelengths']['lamps'] = ['ArI','NeI','KrI','XeI']
+        #par['calibrations']['wavelengths']['lamps'] = ['OH_MODS']
         par['calibrations']['wavelengths']['n_first'] = 3
         par['calibrations']['wavelengths']['match_toler'] = 2.5
 
         # slit
         par['calibrations']['slitedges']['sync_predict'] = 'nearest'
-        par['calibrations']['slitedges']['edge_thresh'] = 50.
+        par['calibrations']['slitedges']['edge_thresh'] = 100.
 
         # Set wave tilts order
         par['calibrations']['tilts']['spat_order'] = 5
@@ -1063,7 +1052,6 @@ class LBTMODS1RSpectrographProc(LBTMODSSpectrograph):
         # Sensitivity function defaults
         par['sensfunc']['algorithm'] = 'IR'
         par['sensfunc']['IR']['telgridfile'] = 'TellPCA_3000_26000_R10000.fits'
-
 
         return par
 
@@ -1138,7 +1126,7 @@ class LBTMODS1RSpectrographProc(LBTMODSSpectrograph):
 
 class LBTMODS1BSpectrographProc(LBTMODSSpectrograph):
     """
-    Child to handle LBT/MODS1B specific code for pre-processed images
+    Child to handle LBT/MODS1R specific code
     """
 
     name = 'lbt_mods1b_proc'
@@ -1198,9 +1186,6 @@ class LBTMODS1BSpectrographProc(LBTMODSSpectrograph):
         """
         par = super().default_pypeit_par()
 
-        par.reset_all_processimages_par(use_illumflat=False, use_biasimage=False, use_overscan=False, 
-                  use_pixelflat=False, use_specillum=False, trim=False)
-
         par['flexure']['spec_method'] = 'boxcar'
 
         # 1D wavelength solution
@@ -1210,7 +1195,7 @@ class LBTMODS1BSpectrographProc(LBTMODSSpectrograph):
 
         # slit
         par['calibrations']['slitedges']['sync_predict'] = 'nearest'
-        par['calibrations']['slitedges']['edge_thresh'] = 50.
+        par['calibrations']['slitedges']['edge_thresh'] = 100.
 
         # Set wave tilts order
         par['calibrations']['tilts']['spat_order'] = 5
@@ -1241,8 +1226,7 @@ class LBTMODS1BSpectrographProc(LBTMODSSpectrograph):
             adjusted for configuration specific parameter values.
         """
         # Start with instrument wide
-        #par = super(LBTMODS1BSpectrograph, self).config_specific_par(scifile, inp_par=inp_par)
-        par = super().config_specific_par(scifile, inp_par=inp_par)
+        par = super(LBTMODS1BSpectrograph, self).config_specific_par(scifile, inp_par=inp_par)
 
         if self.get_meta_value(scifile, 'dispname') == 'G400L':
             par['calibrations']['wavelengths']['method'] = 'full_template'
@@ -1293,7 +1277,7 @@ class LBTMODS1BSpectrographProc(LBTMODSSpectrograph):
 
 class LBTMODS2RSpectrographProc(LBTMODSSpectrograph):
     """
-    Child to handle LBT/MODS2R specific code for pre-processed images
+    Child to handle LBT/MODS1R specific code
     """
     name = 'lbt_mods2r_proc'
     camera = 'MODS2R'
@@ -1356,22 +1340,21 @@ class LBTMODS2RSpectrographProc(LBTMODSSpectrograph):
         """
         par = super().default_pypeit_par()
 
-        par.reset_all_processimages_par(use_illumflat=False, use_biasimage=False, use_overscan=False, 
-                  use_pixelflat=False, use_specillum=False, trim=False)
-
         par['flexure']['spec_method'] = 'boxcar'
 
         # 1D wavelength solution
         par['calibrations']['wavelengths']['sigdetect'] = 5.
         par['calibrations']['wavelengths']['rms_thresh_frac_fwhm'] = 0.22
         par['calibrations']['wavelengths']['fwhm'] = 10.
+        #par['calibrations']['wavelengths']['lamps'] = ['XeI','ArII','ArI','NeI','KrI']]
         par['calibrations']['wavelengths']['lamps'] = ['ArI','NeI','KrI','XeI']
+        #par['calibrations']['wavelengths']['lamps'] = ['OH_MODS']
         par['calibrations']['wavelengths']['n_first'] = 3
         par['calibrations']['wavelengths']['match_toler'] = 2.5
 
         # slit
         par['calibrations']['slitedges']['sync_predict'] = 'nearest'
-        par['calibrations']['slitedges']['edge_thresh'] = 50.
+        par['calibrations']['slitedges']['edge_thresh'] = 300.
 
         # Set wave tilts order
         par['calibrations']['tilts']['spat_order'] = 5
@@ -1453,7 +1436,7 @@ class LBTMODS2RSpectrographProc(LBTMODSSpectrograph):
 
 class LBTMODS2BSpectrographProc(LBTMODSSpectrograph):
     """
-    Child to handle LBT/MODS2B specific code for pre-processed images
+    Child to handle LBT/MODS1R specific code
     """
     name = 'lbt_mods2b_proc'
     camera = 'MODS2B'
@@ -1513,9 +1496,6 @@ class LBTMODS2BSpectrographProc(LBTMODSSpectrograph):
         """
         par = super().default_pypeit_par()
 
-        par.reset_all_processimages_par(use_illumflat=False, use_biasimage=False, use_overscan=False, 
-                  use_pixelflat=False, use_specillum=False, trim=False)
-
         par['flexure']['spec_method'] = 'boxcar'
 
         # 1D wavelength solution
@@ -1525,7 +1505,7 @@ class LBTMODS2BSpectrographProc(LBTMODSSpectrograph):
 
         # slit
         par['calibrations']['slitedges']['sync_predict'] = 'nearest'
-        par['calibrations']['slitedges']['edge_thresh'] = 50.
+        par['calibrations']['slitedges']['edge_thresh'] = 100.
 
         # Set wave tilts order
         par['calibrations']['tilts']['spat_order'] = 5
@@ -1556,8 +1536,7 @@ class LBTMODS2BSpectrographProc(LBTMODSSpectrograph):
             adjusted for configuration specific parameter values.
         """
         # Start with instrument wide
-        #par = super(LBTMODS2BSpectrograph, self).config_specific_par(scifile, inp_par=inp_par)
-        par = super().config_specific_par(scifile, inp_par=inp_par)
+        par = super(LBTMODS2BSpectrograph, self).config_specific_par(scifile, inp_par=inp_par)
 
         if self.get_meta_value(scifile, 'dispname') == 'G400L':
             par['calibrations']['wavelengths']['method'] = 'full_template'
