@@ -952,7 +952,7 @@ def map_fwhm(image, gpm, slits_left, slits_right, slitmask, npixel=None, nsample
     return np.array(resmap)
 
 
-def measure_fwhm(spec, sigdetect=10., fwhm=5.):
+def measure_fwhm(spec, sigdetect=10., fwhm=30.):
     """
     Measure the arc lines FWHM, i.e, approximate spectral resolution
 
