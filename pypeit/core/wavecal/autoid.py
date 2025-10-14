@@ -972,6 +972,9 @@ def measure_fwhm(spec, sigdetect=10., fwhm=5.):
 
     # Determine the lines FWHM, i.e, approximate spectral resolution
     #  This may only be recorded and not used by the algorithms
+    #
+    msgs.info(f"In autoid.measure_fwhm: sigdetect = {sigdetect:.1f} fwhm = {fwhm:.1f} pixels")
+    #
     _, _, _, wdth, _, best, _, nsig = arc.detect_lines(spec, sigdetect=sigdetect, fwhm=fwhm)
     # 1sigma Gaussian widths of the line detections
     wdth = wdth[best]

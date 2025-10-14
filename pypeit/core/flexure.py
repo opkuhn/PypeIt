@@ -560,7 +560,7 @@ def get_fwhm_gauss_smooth(arx_skyspec, obj_skyspec, arx_fwhm_pix, spec_fwhm_pix=
         msgs.info('Diagnostic: spec_fwhm_pix = {}'.format(spec_fwhm_pix))
         ### 
         #spec_fwhm_pix = autoid.measure_fwhm(obj_skyspec.flux.value, sigdetect=4., fwhm=4.)
-        spec_fwhm_pix = autoid.measure_fwhm(obj_skyspec.flux.value, sigdetect=4., fwhm=30.)
+        spec_fwhm_pix = autoid.measure_fwhm(obj_skyspec.flux.value, sigdetect=3., fwhm=30.)
         msgs.info('Measuring spectral FWHM using the boxcar extracted sky spectrum.')
         if spec_fwhm_pix is None:
             msgs.warn('Failed to measure the spectral FWHM using the boxcar extracted sky spectrum. '
