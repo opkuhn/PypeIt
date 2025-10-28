@@ -42,7 +42,11 @@ bottom of the :doc:`../spectrographs/spectrographs` page.
    Keck NIRES <nires_howto>
    Keck NIRSPEC <nirspec_high_howto>
    Shane Kast <kast_howto>
+<<<<<<< HEAD
    LBT MODS <mods_howto>
+=======
+   Subaru FOCAS <focas_howto>
+>>>>>>> upstream/develop
 
 ----
 
