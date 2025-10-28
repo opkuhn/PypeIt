@@ -249,24 +249,12 @@ You may refine the wavelength calibration using :ref:`pypeit_identify`. The comm
  pypeit_identify Calibrations/Arc_A_0_DET01.fits Calibrations/Slits_A_0_DET01.fits.gz -s --slits 2
 
 This plots the arc spectrum and labels all identified lines. Grey lines indicate those lines detected but not 
-identified. How to marking new line, delete lines and increase or decrease the fit order are all described in
+identified. How to mark new lines, delete lines and increase or decrease the fit order are all described in
 :ref:`pypeit_identify`.
 
 .. figure:: ../figures/mods/mods1b_identify.png
 
 Remember, the default calibration is in vacuum wavelengths. The line lists provided on the `LBTO Sciops MODS webpages <https://scienceops.lbto.org/mods/>`_ have been converted to vacuum wavelengths for use by pypeit. 
-
-Spectral Flexure
-----------------
-
-PypeIt performs spectral flexure correction on science targets, although it does not do this for standard stars. The shift
-is determined by cross-correlating a template sky spectrum which has been convolved with a Gaussian with the FWHM of the arc files with the data. 
-There is both a global correction, applied to all slits, and local correction, an offset from the global one, for each slit. 
-Since most MODS spectra are not taken through the 0.6" slit that is used for the arcs, the procedure may not be exactly correct, but it works well nevertheless.
-View the set of spec_flex images in QA/PNGs to verify that the flexure correction looks good. For MODS1R, the global spec_flex_sky PNG looks like this:
-
-.. figure:: ../figures/mods/m1r_flexure.png
-   :width: 40%
 
 Spectra
 -------
@@ -331,6 +319,20 @@ and optimally extracted spectra for the first object (spec[0]) in the 1D spec fi
    spec = specobjs.SpecObjs.from_fitsfile(spec1dfits)
    plt.plot(spec[0]['BOX_WAVE'],spec[0]['BOX_COUNTS']
    plt.plot(spec[0]['OPT_WAVE'],spec[0]['OPT_COUNTS']
+
+
+Spectral Flexure
+++++++++++++++++
+
+PypeIt performs spectral flexure correction on science targets, although it does not do this for standard stars. The shift
+is determined by cross-correlating a template sky spectrum which has been convolved with a Gaussian with the FWHM of the arc files with the data. 
+There is both a global correction, applied to all slits, and local correction, an offset from the global one, for each slit. 
+Since most MODS spectra are not taken through the 0.6" slit that is used for the arcs, the procedure may not be exactly correct, but it works well nevertheless.
+View the set of spec_flex images in QA/PNGs to verify that the flexure correction looks good. For MODS1R, the global spec_flex_sky PNG looks like this:
+
+.. figure:: ../figures/mods/m1r_flexure.png
+   :width: 40%
+
 
 Flux Calibration 
 ================
