@@ -90,7 +90,7 @@ in which to run pypeit.
 Run pypeit_setup
 ----------------
 
-In the pypeit_rdx/ sub directory, run :ref:`pypeit_setup`` to create the pypeit input files for the blue
+In the pypeit_rdx/ sub directory, run :ref:`pypeit_setup` to create the pypeit input files for the blue
 and red channels. 
 
 .. code-block:: bash
@@ -254,7 +254,7 @@ identified. How to mark new lines, delete lines and increase or decrease the fit
 
 .. figure:: ../figures/mods/mods1b_identify.png
 
-Remember, the default calibration is in vacuum wavelengths. The line lists provided on the `LBTO Sciops MODS webpages <https://scienceops.lbto.org/mods/>`_ have been converted to vacuum wavelengths for use by pypeit. 
+Remember, the default calibration is in vacuum wavelengths. The line lists provided on the `LBTO Sciops MODS webpages <https://scienceops.lbto.org/mods/>`__ have been converted to vacuum wavelengths for use by pypeit. 
 
 Spectra
 -------
@@ -340,7 +340,7 @@ Flux Calibration
 Sensitivity function
 ------------------------
 
-Pypeit currently uses two algorithms to determine the :doc:`fluxing` -- UVIS for wavelengths < 7000 :math:`\mathrm{\mathring{A}}`, and IR for spectra at longer wavelengths. 
+Pypeit currently uses two algorithms to determine the :ref:`fluxing` -- UVIS for wavelengths < 7000 :math:`\mathrm{\mathring{A}}`, and IR for spectra at longer wavelengths. 
 The IR method does not apply extinction but does a detailed fitting of the telluric absorption. MODS users may wish to try both UVIS and IR for the red channel
 spectra. 
 
@@ -366,7 +366,7 @@ star spectrum, with the tabulated spectrum overplotted in green for comparison.
 
    Note that pypeit uses spectroscopic zeropoints, which are defined so that a source with a flat spectrum in frequency 
    will and AB magntiude equal to the zeropoint will produce 1 photon/s/angstrom on the detector. To convert these 
-   zeropoints (:math:`ZP`) to the zeropoints tabulated on the `LBTO Sciops MODS webpages <https://scienceops.lbto.org/mods>`_ (:math:`ZP_m`):
+   zeropoints (:math:`ZP`) to the zeropoints tabulated on the `LBTO Sciops MODS webpages <https://scienceops.lbto.org/mods>`__ (:math:`ZP_m`):
 
    :math:`ZP_m` = 0.4 :math:`ZP` + 2 log10(:math:`\lambda`) + 0.964 - log10(g)
 
@@ -444,7 +444,7 @@ Flux Calibrating the spectra
 ----------------------------
 
 Setup files for the next three steps: flux calibrating the spectra, coadding these, and correcting for
-telluric absorption; are generated with a single script, :ref:`pypeit_setup_flux`.
+telluric absorption; are generated with a single script, :ref:`pypeit_flux_setup`.
 
 Coadding the 1D spectra
 -----------------------

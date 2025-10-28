@@ -35,6 +35,7 @@ bottom of the :doc:`../spectrographs/spectrographs` page.
 
    APF Levy <apf_howto>
    Gemini GNIRS <gnirs_howto>
+   LBT MODS <mods_howto>
    Keck DEIMOS <deimos_howto>
    Keck HIRES <hires_howto>
    Keck LRIS <lris_howto>
@@ -42,11 +43,7 @@ bottom of the :doc:`../spectrographs/spectrographs` page.
    Keck NIRES <nires_howto>
    Keck NIRSPEC <nirspec_high_howto>
    Shane Kast <kast_howto>
-<<<<<<< HEAD
-   LBT MODS <mods_howto>
-=======
    Subaru FOCAS <focas_howto>
->>>>>>> upstream/develop
 
 ----
 
