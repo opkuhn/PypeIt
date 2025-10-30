@@ -340,19 +340,18 @@ Flux Calibration
 Sensitivity function
 ------------------------
 
-Pypeit currently uses two algorithms to determine the :ref:`fluxing` -- UVIS for wavelengths < 7000 :math:`\mathrm{\mathring{A}}`, and IR for spectra at longer wavelengths. 
-The IR method does not apply extinction but does a detailed fitting of the telluric absorption. MODS users may wish to try both UVIS and IR for the red channel
-spectra. 
+As described in :ref:`fluxing`, pypeit currently has two algorithms to determine the sensitivity function -- UVIS for wavelengths < 7000 :math:`\mathrm{\mathring{A}}` and IR for spectra at longer wavelengths.  The IR method does not apply extinction but does a detailed fitting 
+of the telluric absorption. MODS users may wish to try both UVIS and IR for the red channel spectra. In this example, UVIS was used for the blue channel spectra and IR for the red. 
 
-The script ..ref::`pypeit_sensfunc` generates the sensitivity function from a single spectrophotometric standard star spectrum. Since MODS scripts typically take 3 
+The script :ref:`pypeit_sensfunc` generates the sensitivity function from a single spectrophotometric standard star spectrum. Since MODS scripts typically take 3 
 back-to-back standard star integrations, it can be reassuring to overplot these (you may need to write a custom script with commands similar to those shown above) to insure that
-there was no significant variation between them and to select the best. It reads in a sensfunc input file (e.g. mods1b_dual.sens) and the filename of the 1D spectrum to 
-use, e.g.
+there was no significant variation between them and to select the best. :ref:`pypeit_sensfunc` reads in a sensfunc input file (sample input files, e.g. mods1b_dual.sens, are given below) and the filename of the 1D spectrum to use:
 
 ``pypeit_sensfunc -s mods1b_dual.sens Science/spec1d_mods1b.20230909.0024_otf-Feige110dualgrating_MODS1B_20230909T084730.480.fits --debug -v 2`` 
-The debug and high verbosity (v = [0,1,2]) are helpful, especially when starting to reduce a dataset. 
 
-:ref:`pypeit_sensfunc` outputs a fits file which contains the sensitivity function along with 3 PDFs: one of the 
+The ``debug`` and high verbosity (``v = [0,1,2]``) options are helpful, especially when starting to reduce a dataset. 
+
+:ref:`pypeit_sensfunc` outputs the sensitivity function as a fits file and also 3 PDFs: one of the 
 throughput vs wavelength; another of the zeropoint vs wavelength; and a third of the flux-calibrated standard 
 star spectrum, with the tabulated spectrum overplotted in green for comparison. 
 
@@ -365,14 +364,14 @@ star spectrum, with the tabulated spectrum overplotted in green for comparison.
 .. note:: 
 
    Note that pypeit uses spectroscopic zeropoints, which are defined so that a source with a flat spectrum in frequency 
-   will and AB magntiude equal to the zeropoint will produce 1 photon/s/angstrom on the detector. To convert these 
+   and an AB magnitude equal to the zeropoint will produce 1 photon/s/:math:`\mathrm{\mathring{A}}` on the detector. To convert these 
    zeropoints (:math:`ZP`) to the zeropoints tabulated on the `LBTO Sciops MODS webpages <https://scienceops.lbto.org/mods>`__ (:math:`ZP_m`):
 
    :math:`ZP_m` = 0.4 :math:`ZP` + 2 log10(:math:`\lambda`) + 0.964 - log10(g)
 
    where :math:`\lambda` is the wavelength in :math:`\mathrm{\mathring{A}}` and g, the conversion gain in e-/ADU (g=1 for the *proc* classes).
 
-Sample sensfunc input files for the blue (UVIS) and red (IR and UVIS) channels are given below.
+Sample sensfunc input files for the blue (UVIS) and red (IR) channels are given below.
 
 Blue
 ++++
@@ -432,12 +431,12 @@ The zeropoints vs wavelength PDF is shown below.
 .. figure:: ../figures/mods/mods1r_dual_sensfuncQA.png
    :width: 40%
 
-And to illustrate that the fits to the sensitivity function account for the wiggles in the dichroic transmission curves,
-the MODS1 Dual Red and Dual Blue zeropoints output by pypeit_sensfunc are plotted together with the MODS1 dichroic 
-transmission curves, below.
+To illustrate that the fits to the sensitivity function account for the wiggles in the dichroic transmission curves,
+the MODS1 Dual Red and Dual Blue zeropoint fits output by pypeit_sensfunc (solid blue or red curves) are plotted together 
+with the MODS1 dichroic transmission curves which have been scaled to overlap (dotted), below.
 
 .. figure:: ../figures/mods/mods1_dichroic_wiggles.png
-   :width: 40%
+   :width: 100%
 
 
 Flux Calibrating the spectra
