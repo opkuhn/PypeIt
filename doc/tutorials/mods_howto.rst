@@ -28,6 +28,21 @@ This tutorial will use the _proc classes, but within the RAW_DATA folder of the 
 can find sets of both raw and pre-processed data, and pypeit_files for each dataset are in 
 `Pypeit-development-suite github <https://github.com/pypeit/PypeIt-development-suite/tree/main/pypeit_files>`_. 
 
+Update 2026-05-15: The controllers in both MODS1 and MODS2 were upgraded in the summer of 2025, and consequently
+the structure of the raw data files has changed significantly. Where the data used to be stored as simple FITS files, they are now stored
+as multi-extension files, with one extension for each of the quadrants, a 5th extension which contains the controller configuration parameters
+and a 6th extension which contains an overscan-subtracted, merged image. 
+
+Although the detectors are the original ones, the dimensions of the data have changed because the 32-column overscan region is now being read and the
+number of prescan columns has changed from 48 to 50. Post-upgrade images have, for each quadrant, 50-columns of prescan and 32-columns of overscan.
+The detector is still read out through 4 amplifiers, but now through a single chain rather than two, so the even-odd column striping is no longer seen 
+and a single overscan value can be subtracted from each quadrant.
+
+The original classes (*lbt_mods1b*, *lbt_mods1r*, *lbt_mods2b* and *lbt_mods2r*) still need to be modified to work with the new data. 
+The new classes which operate on pre-processed data (*lbt_mods1b_proc*, *lbt_mods1r_proc*, *lbt_mods2b_proc* and *lbt_mods2r_proc*) will continue to work,
+and an updated set of pre-processing scripts is in preparation.
+
+
 Setup
 =====
 
