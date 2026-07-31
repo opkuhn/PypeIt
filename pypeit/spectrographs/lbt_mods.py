@@ -1200,8 +1200,8 @@ class LBTMODS1RArchonSpectrograph(LBTMODS1RSpectrograph):
             nonlinear       = 0.99,
             mincounts       = -1e10,
             numamplifiers   = 4,
-            gain            = np.atleast_1d([2.5,2.5,2.5,2.5]), # Need final values for these
-            ronoise         = np.atleast_1d([3.5,3.5,3.5,3.5]) # Need updated values for these
+            gain            = np.atleast_1d([2.54,2.59,2.58,2.56]), # Updated based on 20260501 measurements for Q1, Q2, Q3, Q4 (IM3, IM4, IM1, IM2)
+            ronoise         = np.atleast_1d([3.88,3.99,3.20,3.76]) # Updated based on 20260501 measurements for Q1, Q2, Q3, Q4 (IM3, IM4, IM1, IM2) 
             )
         return DetectorContainer(**detector_dict)
 
@@ -1362,8 +1362,8 @@ class LBTMODS1BArchonSpectrograph(LBTMODS1BSpectrograph):
             nonlinear       = 0.99,
             mincounts       = -1e10,
             numamplifiers   = 4,
-            gain            = np.atleast_1d([2.55,1.91,2.09,2.02]), # Need updated values for these
-            ronoise         = np.atleast_1d([3.41,2.93,2.92,2.76]) # Need updated values for these
+            gain            = np.atleast_1d([2.39,2.28,2.32,2.32]), # Updated based on 20260501 measurements for Q1, Q2, Q3, Q4 (IM3, IM4, IM1, IM2)
+            ronoise         = np.atleast_1d([4.07,5.06,4.22,4.41]) # Updated based on 20260501 measurements for Q1, Q2, Q3, Q4 (IM3, IM4, IM1, IM2)
             )
         return DetectorContainer(**detector_dict)
 
