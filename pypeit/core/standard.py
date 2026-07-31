@@ -24,7 +24,7 @@ from pypeit.utils import all_subclasses
 
 
 def mAB_to_cgs(wave, mAB):
-    """
+    r"""
     Convert AB magnitudes to :math:`F_\lambda` in the cgs units :math:`{\rm erg/cm}^2{\rm/s}/\AA`.
 
     Parameters
@@ -902,9 +902,10 @@ def get_model_standard(spectral_type, V_mag):
             return KuruczModelStandard(V_mag, spectral_type)
 
 
-def get_standard_spectrum(archives, spectral_type=None, V_mag=None, ra=None, dec=None, tol=20., unit=None):
-#def get_standard_spectrum(spectral_type=None, V_mag=None, ra=None, dec=None, tol=20., unit=None,
-#                          archives=None):
+
+def get_standard_spectrum(
+    archives='default', spectral_type=None, V_mag=None, ra=None, dec=None, tol=20., unit=None
+):
     """
     Return a standard spectrum.
 
@@ -916,6 +917,11 @@ def get_standard_spectrum(archives, spectral_type=None, V_mag=None, ra=None, dec
 
     Parameters
     ----------
+    archives : str, optional
+        The specific archive to search for the spectrum.  If ``'default'``, the
+        search will proceed through the priortized list provided by
+        :func:`~pypeit.core.standard.get_archive_sets`.  Otherwise, it will only
+        search the single archive provided.
     spectral_type : str, optional
         The spectral type of the star or the signifier of the spectrum to use.
         See :func:`~pypeit.core.standard.get_model_standard`.
@@ -945,7 +951,5 @@ def get_standard_spectrum(archives, spectral_type=None, V_mag=None, ra=None, dec
         raise PypeItError('Insufficient data provided to determine the appropriate standard spectrum.  '
                    'Provide either the coordinates of the standard or a stellar type and '
                    'magnitude.')
-# add star_arxiv here
-#   if archives != 'default': 
     return get_archive_standard(ra, dec, tol=tol, unit=unit, archives=archives)
 
