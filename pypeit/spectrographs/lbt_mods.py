@@ -5,6 +5,8 @@ Module for LBT/MODS specific methods.
 """
 from pathlib import Path
 
+from IPython import embed
+
 import numpy as np
 from astropy.io import fits
 from astropy.table import Table
@@ -85,7 +87,7 @@ class LBTMODSSpectrograph(spectrograph.Spectrograph):
         self.meta['exptime'] = dict(ext=0, card='EXPTIME')
         self.meta['airmass'] = dict(ext=0, card='AIRMASS')
         self.meta['dispname'] = dict(ext=0, card='GRATNAME')
-        #self.meta['filter'] = dict(ext=0, card='FILTNAME')
+        self.meta['filter1'] = dict(ext=0, card='FILTNAME')
         self.meta['dichroic'] = dict(ext=0, card='DICHNAME')
         self.meta['idname'] = dict(ext=0, card='IMAGETYP')
         self.meta['instrument'] = dict(ext=0, card='INSTRUME')
@@ -145,7 +147,7 @@ class LBTMODSSpectrograph(spectrograph.Spectrograph):
             :obj:`list`: List of keywords from the raw data files that should
             be propagated in output files.
         """
-        return ['INSTRUME', 'MASKNAME', 'DICHNAME', 'GRATNAME', 'CCDXBIN', 'CCDYBIN']
+        return ['INSTRUME', 'MASKNAME', 'DICHNAME', 'GRATNAME', 'CCDXBIN', 'CCDYBIN', 'FILTNAME']
 
     def check_frame_type(self, ftype, fitstbl, exprng=None):
         """
@@ -1147,6 +1149,99 @@ class LBTMODS1RSpectrographProc(LBTMODSSpectrograph):
     # The processed images have been bad-pixel corrected already, so it is not necessary to 
     # generate a bad pixel mask, bpm_img, with function bpm.
 
+    def tweak_standard(self, wave_in, counts_in, counts_ivar_in, gpm_in, meta_table,
+                       trim_std_pixs=None, log10_blaze_function=None):
+        """
+        This routine is for performing instrument- and/or disperser-specific
+        tweaks to standard stars so that sensitivity function fits will be
+        well behaved.
+
+        These are tweaks needed by LDT/DeVeny for smooth sensfunc sailing.
+
+        NOTE: if the `trim_std_pixs` parameter is not None, then the standard star spectrum will be only trimmed
+        by the specified number of pixels at the start and end of the spectrum, and no other tweaks will be
+        performed.
+
+        Parameters
+        ----------
+        wave_in: `numpy.ndarray`_
+            Input standard star wavelengths (:obj:`float`, ``shape = (nspec,)``)
+        counts_in: `numpy.ndarray`_
+            Input standard star counts (:obj:`float`, ``shape = (nspec,)``)
+        counts_ivar_in: `numpy.ndarray`_
+            Input inverse variance of standard star counts (:obj:`float`, ``shape = (nspec,)``)
+        gpm_in: `numpy.ndarray`_
+            Input good pixel mask for standard (:obj:`bool`, ``shape = (nspec,)``)
+        meta_table: :obj:`dict`
+            Table containing meta data that is slupred from the :class:`~pypeit.specobjs.SpecObjs`
+            object.  See :meth:`~pypeit.specobjs.SpecObjs.unpack_object` for the
+            contents of this table.
+        trim_std_pixs: :obj:`list` or :obj:`tuple`, optional
+            List or tuple of two integers specifying the number of pixels to
+            trim from the start and end of the standard star spectrum. If None,
+            no trimming is applied. Default=None.
+        log10_blaze_function: `numpy.ndarray`_ or None
+            Input blaze function to be tweaked, optional. Default=None.
+
+        Returns
+        -------
+        wave_out: `numpy.ndarray`_
+            Output standard star wavelengths (:obj:`float`, ``shape = (nspec,)``)
+        counts_out: `numpy.ndarray`_
+            Output standard star counts (:obj:`float`, ``shape = (nspec,)``)
+        counts_ivar_out: `numpy.ndarray`_
+            Output inverse variance of standard star counts (:obj:`float`, ``shape = (nspec,)``)
+        gpm_out: `numpy.ndarray`_
+            Output good pixel mask for standard (:obj:`bool`, ``shape = (nspec,)``)
+        log10_blaze_function_out: `numpy.ndarray`_ or None
+            Output blaze function after being tweaked.
+        """
+
+        if trim_std_pixs is not None:
+            return super().tweak_standard(wave_in, counts_in, counts_ivar_in, gpm_in, meta_table,
+                                          trim_std_pixs=trim_std_pixs, log10_blaze_function=log10_blaze_function)
+
+        # First, simply chop off the wavelengths outside physical limits:
+        valid_wave = (wave_in >= 3170.0) & (wave_in <= 10300.0)
+        wave_out = wave_in[valid_wave]
+        counts_out = counts_in[valid_wave]
+        counts_ivar_out = counts_ivar_in[valid_wave]
+        gpm_out = gpm_in[valid_wave]
+
+        if log10_blaze_function is not None:
+            log10_blaze_function_out = log10_blaze_function[valid_wave]
+        else:
+            log10_blaze_function_out = None
+
+        # Next, build a gpm based on other reasonable wavelengths and filters
+        edge_region = (wave_out < 3170.0) | (wave_out > 10300.0)
+        neg_counts = counts_out <= 0
+
+        # If an order-blocking filter was in use, mask blocked region
+        #  at "nominal" cutoff value
+        if 'DICHROIC' in meta_table.keys():
+            ddmode = meta_table['DICHROIC'].strip()
+            if ddmode == "Dual":
+                block_region = wave_out < 5700.0
+            elif ddmode == 'Red':
+                block_region = wave_out < 4500.0
+            else:
+                block_region = wave_out < 0
+        # In case the filter didn't make it into the header
+        else: block_region = wave_out < 0
+
+        # Build up the OUTPUT GOOD PIXEL MASK
+        gpm_out = (
+            gpm_out
+            & np.logical_not(edge_region)
+            & np.logical_not(neg_counts)
+            & np.logical_not(block_region)
+        )
+
+        return wave_out, counts_out, counts_ivar_out, gpm_out, log10_blaze_function_out
+
+
+
 class LBTMODS1BSpectrographProc(LBTMODSSpectrograph):
     """
     Child to handle LBT/MODS1B specific code for pre-processed images
@@ -1265,6 +1360,99 @@ class LBTMODS1BSpectrographProc(LBTMODSSpectrograph):
 
     # The processed images have been bad-pixel corrected already, so it is not necessary to 
     # generate a bad pixel mask, bpm_img, with function bpm.
+
+
+    def tweak_standard(self, wave_in, counts_in, counts_ivar_in, gpm_in, meta_table,
+                       trim_std_pixs=None, log10_blaze_function=None):
+        """
+        This routine is for performing instrument- and/or disperser-specific
+        tweaks to standard stars so that sensitivity function fits will be
+        well behaved.
+
+        These are tweaks needed by LDT/DeVeny for smooth sensfunc sailing.
+
+        NOTE: if the `trim_std_pixs` parameter is not None, then the standard star spectrum will be only trimmed
+        by the specified number of pixels at the start and end of the spectrum, and no other tweaks will be
+        performed.
+
+        Parameters
+        ----------
+        wave_in: `numpy.ndarray`_
+            Input standard star wavelengths (:obj:`float`, ``shape = (nspec,)``)
+        counts_in: `numpy.ndarray`_
+            Input standard star counts (:obj:`float`, ``shape = (nspec,)``)
+        counts_ivar_in: `numpy.ndarray`_
+            Input inverse variance of standard star counts (:obj:`float`, ``shape = (nspec,)``)
+        gpm_in: `numpy.ndarray`_
+            Input good pixel mask for standard (:obj:`bool`, ``shape = (nspec,)``)
+        meta_table: :obj:`dict`
+            Table containing meta data that is slupred from the :class:`~pypeit.specobjs.SpecObjs`
+            object.  See :meth:`~pypeit.specobjs.SpecObjs.unpack_object` for the
+            contents of this table.
+        trim_std_pixs: :obj:`list` or :obj:`tuple`, optional
+            List or tuple of two integers specifying the number of pixels to
+            trim from the start and end of the standard star spectrum. If None,
+            no trimming is applied. Default=None.
+        log10_blaze_function: `numpy.ndarray`_ or None
+            Input blaze function to be tweaked, optional. Default=None.
+
+        Returns
+        -------
+        wave_out: `numpy.ndarray`_
+            Output standard star wavelengths (:obj:`float`, ``shape = (nspec,)``)
+        counts_out: `numpy.ndarray`_
+            Output standard star counts (:obj:`float`, ``shape = (nspec,)``)
+        counts_ivar_out: `numpy.ndarray`_
+            Output inverse variance of standard star counts (:obj:`float`, ``shape = (nspec,)``)
+        gpm_out: `numpy.ndarray`_
+            Output good pixel mask for standard (:obj:`bool`, ``shape = (nspec,)``)
+        log10_blaze_function_out: `numpy.ndarray`_ or None
+            Output blaze function after being tweaked.
+        """
+
+        if trim_std_pixs is not None:
+            return super().tweak_standard(wave_in, counts_in, counts_ivar_in, gpm_in, meta_table,
+                                          trim_std_pixs=trim_std_pixs, log10_blaze_function=log10_blaze_function)
+
+        # First, simply chop off the wavelengths outside physical limits:
+        valid_wave = (wave_in >= 3170.0) & (wave_in <= 10300.0)
+        wave_out = wave_in[valid_wave]
+        counts_out = counts_in[valid_wave]
+        counts_ivar_out = counts_ivar_in[valid_wave]
+        gpm_out = gpm_in[valid_wave]
+
+        if log10_blaze_function is not None:
+            log10_blaze_function_out = log10_blaze_function[valid_wave]
+        else:
+            log10_blaze_function_out = None
+
+        # Next, build a gpm based on other reasonable wavelengths and filters
+        edge_region = (wave_out < 3170.0) | (wave_out > 10300.0)
+        neg_counts = counts_out <= 0
+
+        # If an order-blocking filter was in use, mask blocked region
+        #  at "nominal" cutoff value
+        if 'DICHROIC' in meta_table.keys():
+            ddmode = meta_table['DICHROIC'].strip()
+            if ddmode == "Dual":
+                block_region = wave_out > 5700.0
+            elif ddmode == 'Blue':
+                block_region = wave_out > 6500.0
+            else:
+                block_region = wave_out < 0
+        # In case the filter didn't make it into the header
+        else: block_region = wave_out < 0
+
+        # Build up the OUTPUT GOOD PIXEL MASK
+        gpm_out = (
+            gpm_out
+            & np.logical_not(edge_region)
+            & np.logical_not(neg_counts)
+            & np.logical_not(block_region)
+        )
+
+        return wave_out, counts_out, counts_ivar_out, gpm_out, log10_blaze_function_out
+
 
 class LBTMODS2RSpectrographProc(LBTMODSSpectrograph):
     """
@@ -1397,6 +1585,99 @@ class LBTMODS2RSpectrographProc(LBTMODSSpectrograph):
     # The processed images have been bad-pixel corrected already, so it is not necessary to 
     # generate a bad pixel mask, bpm_img, with function bpm.
 
+
+    def tweak_standard(self, wave_in, counts_in, counts_ivar_in, gpm_in, meta_table,
+                       trim_std_pixs=None, log10_blaze_function=None):
+        """
+        This routine is for performing instrument- and/or disperser-specific
+        tweaks to standard stars so that sensitivity function fits will be
+        well behaved.
+
+        These are tweaks needed by LDT/DeVeny for smooth sensfunc sailing.
+
+        NOTE: if the `trim_std_pixs` parameter is not None, then the standard star spectrum will be only trimmed
+        by the specified number of pixels at the start and end of the spectrum, and no other tweaks will be
+        performed.
+
+        Parameters
+        ----------
+        wave_in: `numpy.ndarray`_
+            Input standard star wavelengths (:obj:`float`, ``shape = (nspec,)``)
+        counts_in: `numpy.ndarray`_
+            Input standard star counts (:obj:`float`, ``shape = (nspec,)``)
+        counts_ivar_in: `numpy.ndarray`_
+            Input inverse variance of standard star counts (:obj:`float`, ``shape = (nspec,)``)
+        gpm_in: `numpy.ndarray`_
+            Input good pixel mask for standard (:obj:`bool`, ``shape = (nspec,)``)
+        meta_table: :obj:`dict`
+            Table containing meta data that is slupred from the :class:`~pypeit.specobjs.SpecObjs`
+            object.  See :meth:`~pypeit.specobjs.SpecObjs.unpack_object` for the
+            contents of this table.
+        trim_std_pixs: :obj:`list` or :obj:`tuple`, optional
+            List or tuple of two integers specifying the number of pixels to
+            trim from the start and end of the standard star spectrum. If None,
+            no trimming is applied. Default=None.
+        log10_blaze_function: `numpy.ndarray`_ or None
+            Input blaze function to be tweaked, optional. Default=None.
+
+        Returns
+        -------
+        wave_out: `numpy.ndarray`_
+            Output standard star wavelengths (:obj:`float`, ``shape = (nspec,)``)
+        counts_out: `numpy.ndarray`_
+            Output standard star counts (:obj:`float`, ``shape = (nspec,)``)
+        counts_ivar_out: `numpy.ndarray`_
+            Output inverse variance of standard star counts (:obj:`float`, ``shape = (nspec,)``)
+        gpm_out: `numpy.ndarray`_
+            Output good pixel mask for standard (:obj:`bool`, ``shape = (nspec,)``)
+        log10_blaze_function_out: `numpy.ndarray`_ or None
+            Output blaze function after being tweaked.
+        """
+
+        if trim_std_pixs is not None:
+            return super().tweak_standard(wave_in, counts_in, counts_ivar_in, gpm_in, meta_table,
+                                          trim_std_pixs=trim_std_pixs, log10_blaze_function=log10_blaze_function)
+
+        # First, simply chop off the wavelengths outside physical limits:
+        valid_wave = (wave_in >= 3170.0) & (wave_in <= 10300.0)
+        wave_out = wave_in[valid_wave]
+        counts_out = counts_in[valid_wave]
+        counts_ivar_out = counts_ivar_in[valid_wave]
+        gpm_out = gpm_in[valid_wave]
+
+        if log10_blaze_function is not None:
+            log10_blaze_function_out = log10_blaze_function[valid_wave]
+        else:
+            log10_blaze_function_out = None
+
+        # Next, build a gpm based on other reasonable wavelengths and filters
+        edge_region = (wave_out < 3170.0) | (wave_out > 10300.0)
+        neg_counts = counts_out <= 0
+
+        # If an order-blocking filter was in use, mask blocked region
+        #  at "nominal" cutoff value
+        if 'DICHROIC' in meta_table.keys():
+            ddmode = meta_table['DICHROIC'].strip()
+            if ddmode == "Dual":
+                block_region = wave_out < 5700.0
+            elif ddmode == 'Red':
+                block_region = wave_out < 4500.0
+            else:
+                block_region = wave_out < 0
+        # In case the filter didn't make it into the header
+        else: block_region = wave_out < 0
+
+        # Build up the OUTPUT GOOD PIXEL MASK
+        gpm_out = (
+            gpm_out
+            & np.logical_not(edge_region)
+            & np.logical_not(neg_counts)
+            & np.logical_not(block_region)
+        )
+
+        return wave_out, counts_out, counts_ivar_out, gpm_out, log10_blaze_function_out
+
+
 class LBTMODS2BSpectrographProc(LBTMODSSpectrograph):
     """
     Child to handle LBT/MODS2B specific code for pre-processed images
@@ -1516,3 +1797,96 @@ class LBTMODS2BSpectrographProc(LBTMODSSpectrograph):
 
     # The processed images have been bad-pixel corrected already, so it is not necessary to 
     # generate a bad pixel mask, bpm_img, with function bpm.
+
+    def tweak_standard(self, wave_in, counts_in, counts_ivar_in, gpm_in, meta_table,
+                       trim_std_pixs=None, log10_blaze_function=None):
+        """
+        This routine is for performing instrument- and/or disperser-specific
+        tweaks to standard stars so that sensitivity function fits will be
+        well behaved.
+
+        These are tweaks needed by LDT/DeVeny for smooth sensfunc sailing.
+
+        NOTE: if the `trim_std_pixs` parameter is not None, then the standard star spectrum will be only trimmed
+        by the specified number of pixels at the start and end of the spectrum, and no other tweaks will be
+        performed.
+
+        Parameters
+        ----------
+        wave_in: `numpy.ndarray`_
+            Input standard star wavelengths (:obj:`float`, ``shape = (nspec,)``)
+        counts_in: `numpy.ndarray`_
+            Input standard star counts (:obj:`float`, ``shape = (nspec,)``)
+        counts_ivar_in: `numpy.ndarray`_
+            Input inverse variance of standard star counts (:obj:`float`, ``shape = (nspec,)``)
+        gpm_in: `numpy.ndarray`_
+            Input good pixel mask for standard (:obj:`bool`, ``shape = (nspec,)``)
+        meta_table: :obj:`dict`
+            Table containing meta data that is slupred from the :class:`~pypeit.specobjs.SpecObjs`
+            object.  See :meth:`~pypeit.specobjs.SpecObjs.unpack_object` for the
+            contents of this table.
+        trim_std_pixs: :obj:`list` or :obj:`tuple`, optional
+            List or tuple of two integers specifying the number of pixels to
+            trim from the start and end of the standard star spectrum. If None,
+            no trimming is applied. Default=None.
+        log10_blaze_function: `numpy.ndarray`_ or None
+            Input blaze function to be tweaked, optional. Default=None.
+
+        Returns
+        -------
+        wave_out: `numpy.ndarray`_
+            Output standard star wavelengths (:obj:`float`, ``shape = (nspec,)``)
+        counts_out: `numpy.ndarray`_
+            Output standard star counts (:obj:`float`, ``shape = (nspec,)``)
+        counts_ivar_out: `numpy.ndarray`_
+            Output inverse variance of standard star counts (:obj:`float`, ``shape = (nspec,)``)
+        gpm_out: `numpy.ndarray`_
+            Output good pixel mask for standard (:obj:`bool`, ``shape = (nspec,)``)
+        log10_blaze_function_out: `numpy.ndarray`_ or None
+            Output blaze function after being tweaked.
+        """
+
+        if trim_std_pixs is not None:
+            return super().tweak_standard(wave_in, counts_in, counts_ivar_in, gpm_in, meta_table,
+                                          trim_std_pixs=trim_std_pixs, log10_blaze_function=log10_blaze_function)
+
+        # First, simply chop off the wavelengths outside physical limits:
+        valid_wave = (wave_in >= 3170.0) & (wave_in <= 10300.0)
+        wave_out = wave_in[valid_wave]
+        counts_out = counts_in[valid_wave]
+        counts_ivar_out = counts_ivar_in[valid_wave]
+        gpm_out = gpm_in[valid_wave]
+
+        if log10_blaze_function is not None:
+            log10_blaze_function_out = log10_blaze_function[valid_wave]
+        else:
+            log10_blaze_function_out = None
+
+        # Next, build a gpm based on other reasonable wavelengths and filters
+        edge_region = (wave_out < 3170.0) | (wave_out > 10300.0)
+        neg_counts = counts_out <= 0
+
+        # If an order-blocking filter was in use, mask blocked region
+        #  at "nominal" cutoff value
+        if 'DICHROIC' in meta_table.keys():
+            ddmode = meta_table['DICHROIC'].strip()
+            if ddmode == "Dual":
+                block_region = wave_out > 5700.0
+            elif ddmode == 'Blue':
+                block_region = wave_out > 6500.0
+            else:
+                block_region = wave_out < 0
+        # In case the filter didn't make it into the header
+        else: block_region = wave_out < 0
+
+        # Build up the OUTPUT GOOD PIXEL MASK
+        gpm_out = (
+            gpm_out
+            & np.logical_not(edge_region)
+            & np.logical_not(neg_counts)
+            & np.logical_not(block_region)
+        )
+
+        return wave_out, counts_out, counts_ivar_out, gpm_out, log10_blaze_function_out
+
+
