@@ -300,7 +300,7 @@ class LBTMODSSpectrograph(spectrograph.Spectrograph):
         #elif naxis1==8192 or naxis1==4096:
         #if (naxis1*xbin)==8192:
         elif proc: 
-           datasize = "[1:"+str(naxis1)+",1:"+str(naxis2)+"]" # Size of image 
+           datasize = "[1:"+str(naxis1)+",1545:"+str(naxis2)+"]" # Size of image 
            _, nx_full, _, ny_full = np.array(parse.load_sections(datasize, fmt_iraf=False)).flatten()
            # Determine the size of the output array...
            nx, ny = int(nx_full), int(ny_full)
@@ -1677,6 +1677,48 @@ class LBTMODS2RSpectrographProc(LBTMODSSpectrograph):
 
         return wave_out, counts_out, counts_ivar_out, gpm_out, log10_blaze_function_out
 
+    def bpm(self, filename, det, shape=None, msbias=None):
+        """
+        Generate a default bad-pixel mask.
+
+        Even though they are both optional, either the precise shape for
+        the image (``shape``) or an example file that can be read to get
+        the shape (``filename`` using :func:`get_image_shape`) *must* be
+        provided.
+
+        Args:
+            filename (:obj:`str` or None):
+                An example file to use to get the image shape.
+            det (:obj:`int`):
+                1-indexed detector number to use when getting the image
+                shape from the example file.
+            shape (tuple, optional):
+                Processed image shape
+                Required if filename is None
+                Ignored if filename is not None
+            msbias (`numpy.ndarray`_, optional):
+                Processed bias frame used to identify bad pixels
+
+        Returns:
+            `numpy.ndarray`_: An integer array with a masked value set
+            to 1 and an unmasked value set to 0.  All values are set to
+            0.
+        """
+        # Call the base-class method to generate the empty bpm
+        bpm_img = super().bpm(filename, det, shape=shape, msbias=msbias)
+        log.info("Using hard-coded BPM for  MODS2B")
+
+        # Get the binning
+        hdu = io.fits_open(filename)
+        header = hdu[0].header
+        xbin, ybin = header['CCDXBIN'], header['CCDYBIN']
+        hdu.close()
+
+        # Apply the mask
+        bpm_img[0//xbin:8191//xbin, 0//ybin:1544//ybin] = 1
+
+        return bpm_img
+
 
 class LBTMODS2BSpectrographProc(LBTMODSSpectrograph):
     """
@@ -1889,4 +1931,270 @@ class LBTMODS2BSpectrographProc(LBTMODSSpectrograph):
 
         return wave_out, counts_out, counts_ivar_out, gpm_out, log10_blaze_function_out
 
+
+class LBTMODS2RSpectrographProcBadQ(LBTMODSSpectrograph):
+    """
+    Child to handle LBT/MODS2R specific code for pre-processed images
+    """
+    name = 'lbt_mods2r_proc_badQ'
+    camera = 'MODS2R'
+    header_name = 'MODS2R'
+    supported = True
+    comment = 'MODS-II red spectrometer pre-processed'
+
+    def get_detector_par(self, det, hdu=None):
+        """
+        Return metadata for the selected detector.
+
+        Args:
+            det (:obj:`int`):
+                1-indexed detector number.
+            hdu (`astropy.io.fits.HDUList`_, optional):
+                The open fits file with the raw image of interest.  If not
+                provided, frame-dependent parameters are set to a default.
+
+        Returns:
+            :class:`~pypeit.images.detector_container.DetectorContainer`:
+            Object with the detector metadata.
+        """
+        # Binning
+        binning = '1,1' if hdu is None \
+                    else f"{hdu[0].header['CCDXBIN']},{hdu[0].header['CCDYBIN']}"
+
+        # Detector 1
+        detector_dict = dict(
+            binning= binning,
+            det=1,
+            dataext         = 0,
+            specaxis        = 0,
+            #specflip        = False,
+            # While _raw_ MODS Red channel spectra require specflip=False, the spectral
+            # axis of the *otf spectra pre-processed by modsCCDRed has already been flipped.
+            specflip        = True,
+            spatflip        = False,
+            platescale      = 0.123,
+            darkcurr        = 0.4,  # e-/pixel/hour
+            saturation      = 65535.,
+            nonlinear       = 0.99,
+            mincounts       = -1e10,
+            numamplifiers   = 4,
+            # Because we're reading in the flipped-about-vertical spectrum, the quadrants mapping needs to be changed [1,2,3,4] -> [2,1,4,3]
+            gain            = np.atleast_1d([1.67,1.70,1.66,1.66]),
+            ronoise         = np.atleast_1d([2.65,2.95,2.87,2.78])
+            #gain            = np.atleast_1d([1.70,1.67,1.66,1.66]),
+            #ronoise         = np.atleast_1d([2.95,2.65,2.78,2.87])
+            )
+        return DetectorContainer(**detector_dict)
+
+    @classmethod
+    def default_pypeit_par(cls):
+        """
+        Return the default parameters to use for this instrument.
+        
+        Returns:
+            :class:`~pypeit.par.pypeitpar.PypeItPar`: Parameters required by
+            all of PypeIt methods.
+        """
+        par = super().default_pypeit_par()
+
+        par.reset_all_processimages_par(use_illumflat=False, use_biasimage=False, use_overscan=False, 
+                  use_pixelflat=False, use_specillum=False, apply_gain=False, trim=False)
+
+        par['flexure']['spec_method'] = 'boxcar'
+
+        # 1D wavelength solution
+        par['calibrations']['wavelengths']['sigdetect'] = 5.
+        par['calibrations']['wavelengths']['rms_thresh_frac_fwhm'] = 0.22
+        par['calibrations']['wavelengths']['fwhm'] = 10.
+        # Red: Dual uses all lamps, Red-Only does not use Hg(Ar) lamp 
+        par['calibrations']['wavelengths']['lamps'] = ['HgI_MODS','ArI_MODS','NeI_MODS','KrI_MODS','XeI_MODS']
+        par['calibrations']['wavelengths']['n_first'] = 3
+        par['calibrations']['wavelengths']['match_toler'] = 2.5
+
+        # slit
+        par['calibrations']['slitedges']['sync_predict'] = 'nearest'
+        par['calibrations']['slitedges']['edge_thresh'] = 50.
+
+        # Set wave tilts order
+        par['calibrations']['tilts']['spat_order'] = 5
+        par['calibrations']['tilts']['spec_order'] = 5
+        par['calibrations']['tilts']['maxdev_tracefit'] = 0.02
+        par['calibrations']['tilts']['maxdev2d'] = 0.02
+        
+        # Sensitivity function defaults
+        par['sensfunc']['algorithm'] = 'IR'
+        par['sensfunc']['IR']['telgridfile'] = 'TellPCA_3000_26000_R10000.fits'
+
+        return par
+
+    def config_specific_par(
+            self,
+            inp:str|list|Path|fits.Header|Table,
+            inp_par:parset.ParSet|None=None
+        ) -> parset.ParSet:
+        """
+        Modify the PypeIt parameters to hard-wired values used for
+        specific instrument configurations.
+
+        Args:
+            inp (:obj:`str`, :obj:`list`, `Path`_, `astropy.io.fits.Header`_, `astropy.table.Table`_):
+                Input filename, an `astropy.io.fits.Header`_ object, or a list
+                of `astropy.io.fits.Header`_ objects.  Or a row from the
+                metadata table.
+            inp_par (:class:`~pypeit.par.parset.ParSet`, optional):
+                Parameter set used for the full run of PypeIt.  If None,
+                use :func:`default_pypeit_par`.
+
+        Returns:
+            :class:`~pypeit.par.parset.ParSet`: The PypeIt parameter set
+            adjusted for configuration specific parameter values.
+        """
+        # Start with instrument-wide parameters
+        par = super().config_specific_par(inp, inp_par=inp_par)
+
+        # Adjust parameters based on grating used
+        grating = self.get_meta_value(inp, 'dispname')
+
+        if grating == 'G670L':
+            par['calibrations']['wavelengths']['method'] = 'full_template'
+            par['calibrations']['wavelengths']['reid_arxiv'] = 'lbt_mods2r_red.fits'
+        return par
+
+    # The processed images have been bad-pixel corrected already, so it is not necessary to 
+    # generate a bad pixel mask, bpm_img, with function bpm.
+
+
+    def bpm(self, filename, det, shape=None, msbias=None):
+        """
+        Generate a default bad-pixel mask.
+
+        Even though they are both optional, either the precise shape for
+        the image (``shape``) or an example file that can be read to get
+        the shape (``filename`` using :func:`get_image_shape`) *must* be
+        provided.
+
+        Args:
+            filename (:obj:`str` or None):
+                An example file to use to get the image shape.
+            det (:obj:`int`):
+                1-indexed detector number to use when getting the image
+                shape from the example file.
+            shape (tuple, optional):
+                Processed image shape
+                Required if filename is None
+                Ignored if filename is not None
+            msbias (`numpy.ndarray`_, optional):
+                Processed bias frame used to identify bad pixels
+
+        Returns:
+            `numpy.ndarray`_: An integer array with a masked value set
+            to 1 and an unmasked value set to 0.  All values are set to
+            0.
+        """
+        # Call the base-class method to generate the empty bpm
+        bpm_img = super().bpm(filename, det, shape=shape, msbias=msbias)
+        log.info("Using hard-coded BPM for  MODS2B")
+
+        # Get the binning
+        hdu = io.fits_open(filename)
+        header = hdu[0].header
+        xbin, ybin = header['CCDXBIN'], header['CCDYBIN']
+        hdu.close()
+
+        # Apply the mask
+        bpm_img[0//xbin:8191//xbin, 0//ybin:1544//ybin] = 1
+
+        return bpm_img
+
+
+    def tweak_standard(self, wave_in, counts_in, counts_ivar_in, gpm_in, meta_table,
+                       trim_std_pixs=None, log10_blaze_function=None):
+        """
+        This routine is for performing instrument- and/or disperser-specific
+        tweaks to standard stars so that sensitivity function fits will be
+        well behaved.
+
+        These are tweaks needed by LDT/DeVeny for smooth sensfunc sailing.
+
+        NOTE: if the `trim_std_pixs` parameter is not None, then the standard star spectrum will be only trimmed
+        by the specified number of pixels at the start and end of the spectrum, and no other tweaks will be
+        performed.
+
+        Parameters
+        ----------
+        wave_in: `numpy.ndarray`_
+            Input standard star wavelengths (:obj:`float`, ``shape = (nspec,)``)
+        counts_in: `numpy.ndarray`_
+            Input standard star counts (:obj:`float`, ``shape = (nspec,)``)
+        counts_ivar_in: `numpy.ndarray`_
+            Input inverse variance of standard star counts (:obj:`float`, ``shape = (nspec,)``)
+        gpm_in: `numpy.ndarray`_
+            Input good pixel mask for standard (:obj:`bool`, ``shape = (nspec,)``)
+        meta_table: :obj:`dict`
+            Table containing meta data that is slupred from the :class:`~pypeit.specobjs.SpecObjs`
+            object.  See :meth:`~pypeit.specobjs.SpecObjs.unpack_object` for the
+            contents of this table.
+        trim_std_pixs: :obj:`list` or :obj:`tuple`, optional
+            List or tuple of two integers specifying the number of pixels to
+            trim from the start and end of the standard star spectrum. If None,
+            no trimming is applied. Default=None.
+        log10_blaze_function: `numpy.ndarray`_ or None
+            Input blaze function to be tweaked, optional. Default=None.
+
+        Returns
+        -------
+        wave_out: `numpy.ndarray`_
+            Output standard star wavelengths (:obj:`float`, ``shape = (nspec,)``)
+        counts_out: `numpy.ndarray`_
+            Output standard star counts (:obj:`float`, ``shape = (nspec,)``)
+        counts_ivar_out: `numpy.ndarray`_
+            Output inverse variance of standard star counts (:obj:`float`, ``shape = (nspec,)``)
+        gpm_out: `numpy.ndarray`_
+            Output good pixel mask for standard (:obj:`bool`, ``shape = (nspec,)``)
+        log10_blaze_function_out: `numpy.ndarray`_ or None
+            Output blaze function after being tweaked.
+        """
+
+        if trim_std_pixs is not None:
+            return super().tweak_standard(wave_in, counts_in, counts_ivar_in, gpm_in, meta_table,
+                                          trim_std_pixs=trim_std_pixs, log10_blaze_function=log10_blaze_function)
+
+        # First, simply chop off the wavelengths outside physical limits:
+        valid_wave = (wave_in >= 3170.0) & (wave_in <= 10300.0)
+        wave_out = wave_in[valid_wave]
+        counts_out = counts_in[valid_wave]
+        counts_ivar_out = counts_ivar_in[valid_wave]
+        gpm_out = gpm_in[valid_wave]
+
+        if log10_blaze_function is not None:
+            log10_blaze_function_out = log10_blaze_function[valid_wave]
+        else:
+            log10_blaze_function_out = None
+
+        # Next, build a gpm based on other reasonable wavelengths and filters
+        edge_region = (wave_out < 3170.0) | (wave_out > 10300.0)
+        neg_counts = counts_out <= 0
+
+        # If an order-blocking filter was in use, mask blocked region
+        #  at "nominal" cutoff value
+        if 'DICHROIC' in meta_table.keys():
+            ddmode = meta_table['DICHROIC'].strip()
+            if ddmode == "Dual":
+                block_region = wave_out < 5700.0
+            elif ddmode == 'Red':
+                block_region = wave_out < 4500.0
+            else:
+                block_region = wave_out < 0
+        # In case the filter didn't make it into the header
+        else: block_region = wave_out < 0
+
+        # Build up the OUTPUT GOOD PIXEL MASK
+        gpm_out = (
+            gpm_out
+            & np.logical_not(edge_region)
+            & np.logical_not(neg_counts)
+            & np.logical_not(block_region)
+        )
+
+        return wave_out, counts_out, counts_ivar_out, gpm_out, log10_blaze_function_out
 
