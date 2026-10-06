@@ -28,6 +28,24 @@ This tutorial will use the _proc classes, but within the RAW_DATA folder of the 
 can find sets of both raw and pre-processed data, and pypeit_files for each dataset are in 
 `Pypeit-development-suite github <https://github.com/pypeit/PypeIt-development-suite/tree/main/pypeit_files>`_. 
 
+.. important:: 
+   Both MODS1 and MODS2 underwent controller upgrades in August 2025, and this has changed how the MODS data are stored. Whereas data taken with
+   the original controllers were stored as simple FITS files, data taken with the new, Archon, controllers are stored in multi-extension FITS files,
+   in which the first 4 extensions contain data for each of the ADC channels (note the correpsondence of ADC channel to detector quadrant illustrated
+   `here <https://scienceops.lbto.org/mods/instrument-characteristics/detector/#TOC-Data-Format>`_). 
+   and the MODS quadrant), the 5th extension stores the controller configuration as a FITS binary table,
+   and the 6th extension contains an overscan-subtracted and trimmed, merged image. The merged image still contains the columns of prescan at either end;
+   only the overscan has been trimmed.
+
+   Although the detectors are the original ones, the dimensions of the data have changed because the 32-column overscan region is now being read 
+   and the number of prescan columns has changed from 48 to 50 (unbinned). The detector is still read out through 4 amplifiers, but now through a 
+   single chain rather than two, so the even-odd column striping is no longer seen and a single overscan value can be subtracted from each quadrant.
+   More information on the new data format can be found on the `LBTO SciOps webpages under MODS -> Detector Characteristics <https://scienceops.lbto.org/mods/instrument-characteristics/detector/>`_.
+
+   The *lbt_mods1b_proc*, *lbt_mods1r_proc*, *lbt_mods2b_proc* and *lbt_mods2r_proc* classes will continue to work for the post-upgrade data, once the
+   merged image has been isolated, trimmed of prescan, and processed (i.e. flat-fielded and bad pixels have been corrected). 
+
+
 Setup
 =====
 
