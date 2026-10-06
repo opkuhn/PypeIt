@@ -1156,7 +1156,9 @@ class LBTMODS1RSpectrographProc(LBTMODSSpectrograph):
         tweaks to standard stars so that sensitivity function fits will be
         well behaved.
 
-        These are tweaks needed by LDT/DeVeny for smooth sensfunc sailing.
+        This function was taken and adapted from the version in ldt_deveny.py.
+        Like LDT/DeVeny, these are tweaks needed by MODS for smooth sensfunc sailing.
+        Using trim_std_pixs to trim the spectrum by x1,x2 pixels at either end does not produce the desired results. 
 
         NOTE: if the `trim_std_pixs` parameter is not None, then the standard star spectrum will be only trimmed
         by the specified number of pixels at the start and end of the spectrum, and no other tweaks will be
@@ -1222,9 +1224,9 @@ class LBTMODS1RSpectrographProc(LBTMODSSpectrograph):
         if 'DICHROIC' in meta_table.keys():
             ddmode = meta_table['DICHROIC'].strip()
             if ddmode == "Dual":
-                block_region = wave_out < 5700.0
+                block_region = wave_out < 5500.0
             elif ddmode == 'Red':
-                block_region = wave_out < 4500.0
+                block_region = wave_out < 4900.0
             else:
                 block_region = wave_out < 0
         # In case the filter didn't make it into the header
@@ -1435,7 +1437,7 @@ class LBTMODS1BSpectrographProc(LBTMODSSpectrograph):
         if 'DICHROIC' in meta_table.keys():
             ddmode = meta_table['DICHROIC'].strip()
             if ddmode == "Dual":
-                block_region = wave_out > 5700.0
+                block_region = wave_out > 5800.0
             elif ddmode == 'Blue':
                 block_region = wave_out > 6500.0
             else:
@@ -1659,9 +1661,9 @@ class LBTMODS2RSpectrographProc(LBTMODSSpectrograph):
         if 'DICHROIC' in meta_table.keys():
             ddmode = meta_table['DICHROIC'].strip()
             if ddmode == "Dual":
-                block_region = wave_out < 5700.0
+                block_region = wave_out < 5500.0
             elif ddmode == 'Red':
-                block_region = wave_out < 4500.0
+                block_region = wave_out < 4900.0
             else:
                 block_region = wave_out < 0
         # In case the filter didn't make it into the header
@@ -1871,7 +1873,7 @@ class LBTMODS2BSpectrographProc(LBTMODSSpectrograph):
         if 'DICHROIC' in meta_table.keys():
             ddmode = meta_table['DICHROIC'].strip()
             if ddmode == "Dual":
-                block_region = wave_out > 5700.0
+                block_region = wave_out > 5800.0
             elif ddmode == 'Blue':
                 block_region = wave_out > 6500.0
             else:
