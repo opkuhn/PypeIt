@@ -1156,9 +1156,8 @@ class LBTMODS1RSpectrographProc(LBTMODSSpectrograph):
         tweaks to standard stars so that sensitivity function fits will be
         well behaved.
 
-        This function was taken and adapted from the version in ldt_deveny.py.
-        Like LDT/DeVeny, these are tweaks needed by MODS for smooth sensfunc sailing.
-        Using trim_std_pixs to trim the spectrum by x1,x2 pixels at either end does not produce the desired results. 
+        This function was adapted from the version in shake_kast.py. It helps, because using trim_std_pixs 
+        to trim the spectrum by x1,x2 pixels at either end was not producing the desired results. 
 
         NOTE: if the `trim_std_pixs` parameter is not None, then the standard star spectrum will be only trimmed
         by the specified number of pixels at the start and end of the spectrum, and no other tweaks will be
@@ -1203,45 +1202,25 @@ class LBTMODS1RSpectrographProc(LBTMODSSpectrograph):
             return super().tweak_standard(wave_in, counts_in, counts_ivar_in, gpm_in, meta_table,
                                           trim_std_pixs=trim_std_pixs, log10_blaze_function=log10_blaze_function)
 
-        # First, simply chop off the wavelengths outside physical limits:
-        valid_wave = (wave_in >= 3170.0) & (wave_in <= 10300.0)
-        wave_out = wave_in[valid_wave]
-        counts_out = counts_in[valid_wave]
-        counts_ivar_out = counts_ivar_in[valid_wave]
-        gpm_out = gpm_in[valid_wave]
+        # Could check the wavelenghts here to do something more robust to header/meta data issues
+
+        if 'DICHROIC' in meta_table.keys():
+            ddmode = meta_table['DICHROIC'].strip()
+            if ddmode == "Dual":
+                edge_region = (wave_in < 5500.0) | (wave_in > 10300.0)
+                gpm_out = gpm_in & np.logical_not(edge_region)
+            elif ddmode == 'Red':
+                edge_region = (wave_in < 4950.0) | (wave_in > 10300.0)
+                gpm_out = gpm_in & np.logical_not(edge_region)
+            else:
+                gpm_out = gpm_in
 
         if log10_blaze_function is not None:
             log10_blaze_function_out = log10_blaze_function[valid_wave]
         else:
             log10_blaze_function_out = None
 
-        # Next, build a gpm based on other reasonable wavelengths and filters
-        edge_region = (wave_out < 3170.0) | (wave_out > 10300.0)
-        neg_counts = counts_out <= 0
-
-        # If an order-blocking filter was in use, mask blocked region
-        #  at "nominal" cutoff value
-        if 'DICHROIC' in meta_table.keys():
-            ddmode = meta_table['DICHROIC'].strip()
-            if ddmode == "Dual":
-                block_region = wave_out < 5500.0
-            elif ddmode == 'Red':
-                block_region = wave_out < 4900.0
-            else:
-                block_region = wave_out < 0
-        # In case the filter didn't make it into the header
-        else: block_region = wave_out < 0
-
-        # Build up the OUTPUT GOOD PIXEL MASK
-        gpm_out = (
-            gpm_out
-            & np.logical_not(edge_region)
-            & np.logical_not(neg_counts)
-            & np.logical_not(block_region)
-        )
-
-        return wave_out, counts_out, counts_ivar_out, gpm_out, log10_blaze_function_out
-
+        return wave_in, counts_in, counts_ivar_in, gpm_out, log10_blaze_function_out
 
 
 class LBTMODS1BSpectrographProc(LBTMODSSpectrograph):
@@ -1371,7 +1350,8 @@ class LBTMODS1BSpectrographProc(LBTMODSSpectrograph):
         tweaks to standard stars so that sensitivity function fits will be
         well behaved.
 
-        These are tweaks needed by LDT/DeVeny for smooth sensfunc sailing.
+        This function was adapted from the version in shake_kast.py. It helps, because using trim_std_pixs 
+        to trim the spectrum by x1,x2 pixels at either end was not producing the desired results. 
 
         NOTE: if the `trim_std_pixs` parameter is not None, then the standard star spectrum will be only trimmed
         by the specified number of pixels at the start and end of the spectrum, and no other tweaks will be
@@ -1416,45 +1396,23 @@ class LBTMODS1BSpectrographProc(LBTMODSSpectrograph):
             return super().tweak_standard(wave_in, counts_in, counts_ivar_in, gpm_in, meta_table,
                                           trim_std_pixs=trim_std_pixs, log10_blaze_function=log10_blaze_function)
 
-        # First, simply chop off the wavelengths outside physical limits:
-        valid_wave = (wave_in >= 3170.0) & (wave_in <= 10300.0)
-        wave_out = wave_in[valid_wave]
-        counts_out = counts_in[valid_wave]
-        counts_ivar_out = counts_ivar_in[valid_wave]
-        gpm_out = gpm_in[valid_wave]
+        if 'DICHROIC' in meta_table.keys():
+            ddmode = meta_table['DICHROIC'].strip()
+            if ddmode == "Dual":
+                edge_region = (wave_in < 3170.0) | (wave_in > 5800.0)
+                gpm_out = gpm_in & np.logical_not(edge_region)
+            elif ddmode == 'Blue':
+                edge_region = (wave_in < 3170.0) | (wave_in > 6500.0)
+                gpm_out = gpm_in & np.logical_not(edge_region)
+            else:
+                gpm_out = gpm_in
 
         if log10_blaze_function is not None:
             log10_blaze_function_out = log10_blaze_function[valid_wave]
         else:
             log10_blaze_function_out = None
 
-        # Next, build a gpm based on other reasonable wavelengths and filters
-        edge_region = (wave_out < 3170.0) | (wave_out > 10300.0)
-        neg_counts = counts_out <= 0
-
-        # If an order-blocking filter was in use, mask blocked region
-        #  at "nominal" cutoff value
-        if 'DICHROIC' in meta_table.keys():
-            ddmode = meta_table['DICHROIC'].strip()
-            if ddmode == "Dual":
-                block_region = wave_out > 5800.0
-            elif ddmode == 'Blue':
-                block_region = wave_out > 6500.0
-            else:
-                block_region = wave_out < 0
-        # In case the filter didn't make it into the header
-        else: block_region = wave_out < 0
-
-        # Build up the OUTPUT GOOD PIXEL MASK
-        gpm_out = (
-            gpm_out
-            & np.logical_not(edge_region)
-            & np.logical_not(neg_counts)
-            & np.logical_not(block_region)
-        )
-
-        return wave_out, counts_out, counts_ivar_out, gpm_out, log10_blaze_function_out
-
+        return wave_in, counts_in, counts_ivar_in, gpm_out, log10_blaze_function_out
 
 class LBTMODS2RSpectrographProc(LBTMODSSpectrograph):
     """
@@ -1587,7 +1545,6 @@ class LBTMODS2RSpectrographProc(LBTMODSSpectrograph):
     # The processed images have been bad-pixel corrected already, so it is not necessary to 
     # generate a bad pixel mask, bpm_img, with function bpm.
 
-
     def tweak_standard(self, wave_in, counts_in, counts_ivar_in, gpm_in, meta_table,
                        trim_std_pixs=None, log10_blaze_function=None):
         """
@@ -1595,7 +1552,8 @@ class LBTMODS2RSpectrographProc(LBTMODSSpectrograph):
         tweaks to standard stars so that sensitivity function fits will be
         well behaved.
 
-        These are tweaks needed by LDT/DeVeny for smooth sensfunc sailing.
+        This function was adapted from the version in shake_kast.py. It helps, because using trim_std_pixs 
+        to trim the spectrum by x1,x2 pixels at either end was not producing the desired results. 
 
         NOTE: if the `trim_std_pixs` parameter is not None, then the standard star spectrum will be only trimmed
         by the specified number of pixels at the start and end of the spectrum, and no other tweaks will be
@@ -1640,44 +1598,25 @@ class LBTMODS2RSpectrographProc(LBTMODSSpectrograph):
             return super().tweak_standard(wave_in, counts_in, counts_ivar_in, gpm_in, meta_table,
                                           trim_std_pixs=trim_std_pixs, log10_blaze_function=log10_blaze_function)
 
-        # First, simply chop off the wavelengths outside physical limits:
-        valid_wave = (wave_in >= 3170.0) & (wave_in <= 10300.0)
-        wave_out = wave_in[valid_wave]
-        counts_out = counts_in[valid_wave]
-        counts_ivar_out = counts_ivar_in[valid_wave]
-        gpm_out = gpm_in[valid_wave]
+        # Could check the wavelenghts here to do something more robust to header/meta data issues
+
+        if 'DICHROIC' in meta_table.keys():
+            ddmode = meta_table['DICHROIC'].strip()
+            if ddmode == "Dual":
+                edge_region = (wave_in < 5500.0) | (wave_in > 10300.0)
+                gpm_out = gpm_in & np.logical_not(edge_region)
+            elif ddmode == 'Red':
+                edge_region = (wave_in < 4950.0) | (wave_in > 10300.0)
+                gpm_out = gpm_in & np.logical_not(edge_region)
+            else:
+                gpm_out = gpm_in
 
         if log10_blaze_function is not None:
             log10_blaze_function_out = log10_blaze_function[valid_wave]
         else:
             log10_blaze_function_out = None
 
-        # Next, build a gpm based on other reasonable wavelengths and filters
-        edge_region = (wave_out < 3170.0) | (wave_out > 10300.0)
-        neg_counts = counts_out <= 0
-
-        # If an order-blocking filter was in use, mask blocked region
-        #  at "nominal" cutoff value
-        if 'DICHROIC' in meta_table.keys():
-            ddmode = meta_table['DICHROIC'].strip()
-            if ddmode == "Dual":
-                block_region = wave_out < 5500.0
-            elif ddmode == 'Red':
-                block_region = wave_out < 4900.0
-            else:
-                block_region = wave_out < 0
-        # In case the filter didn't make it into the header
-        else: block_region = wave_out < 0
-
-        # Build up the OUTPUT GOOD PIXEL MASK
-        gpm_out = (
-            gpm_out
-            & np.logical_not(edge_region)
-            & np.logical_not(neg_counts)
-            & np.logical_not(block_region)
-        )
-
-        return wave_out, counts_out, counts_ivar_out, gpm_out, log10_blaze_function_out
+        return wave_in, counts_in, counts_ivar_in, gpm_out, log10_blaze_function_out
 
 
 class LBTMODS2BSpectrographProc(LBTMODSSpectrograph):
@@ -1807,7 +1746,8 @@ class LBTMODS2BSpectrographProc(LBTMODSSpectrograph):
         tweaks to standard stars so that sensitivity function fits will be
         well behaved.
 
-        These are tweaks needed by LDT/DeVeny for smooth sensfunc sailing.
+        This function was adapted from the version in shake_kast.py. It helps, because using trim_std_pixs 
+        to trim the spectrum by x1,x2 pixels at either end was not producing the desired results. 
 
         NOTE: if the `trim_std_pixs` parameter is not None, then the standard star spectrum will be only trimmed
         by the specified number of pixels at the start and end of the spectrum, and no other tweaks will be
@@ -1852,43 +1792,20 @@ class LBTMODS2BSpectrographProc(LBTMODSSpectrograph):
             return super().tweak_standard(wave_in, counts_in, counts_ivar_in, gpm_in, meta_table,
                                           trim_std_pixs=trim_std_pixs, log10_blaze_function=log10_blaze_function)
 
-        # First, simply chop off the wavelengths outside physical limits:
-        valid_wave = (wave_in >= 3170.0) & (wave_in <= 10300.0)
-        wave_out = wave_in[valid_wave]
-        counts_out = counts_in[valid_wave]
-        counts_ivar_out = counts_ivar_in[valid_wave]
-        gpm_out = gpm_in[valid_wave]
+        if 'DICHROIC' in meta_table.keys():
+            ddmode = meta_table['DICHROIC'].strip()
+            if ddmode == "Dual":
+                edge_region = (wave_in < 3170.0) | (wave_in > 5800.0)
+                gpm_out = gpm_in & np.logical_not(edge_region)
+            elif ddmode == 'Blue':
+                edge_region = (wave_in < 3170.0) | (wave_in > 6500.0)
+                gpm_out = gpm_in & np.logical_not(edge_region)
+            else:
+                gpm_out = gpm_in
 
         if log10_blaze_function is not None:
             log10_blaze_function_out = log10_blaze_function[valid_wave]
         else:
             log10_blaze_function_out = None
 
-        # Next, build a gpm based on other reasonable wavelengths and filters
-        edge_region = (wave_out < 3170.0) | (wave_out > 10300.0)
-        neg_counts = counts_out <= 0
-
-        # If an order-blocking filter was in use, mask blocked region
-        #  at "nominal" cutoff value
-        if 'DICHROIC' in meta_table.keys():
-            ddmode = meta_table['DICHROIC'].strip()
-            if ddmode == "Dual":
-                block_region = wave_out > 5800.0
-            elif ddmode == 'Blue':
-                block_region = wave_out > 6500.0
-            else:
-                block_region = wave_out < 0
-        # In case the filter didn't make it into the header
-        else: block_region = wave_out < 0
-
-        # Build up the OUTPUT GOOD PIXEL MASK
-        gpm_out = (
-            gpm_out
-            & np.logical_not(edge_region)
-            & np.logical_not(neg_counts)
-            & np.logical_not(block_region)
-        )
-
-        return wave_out, counts_out, counts_ivar_out, gpm_out, log10_blaze_function_out
-
-
+        return wave_in, counts_in, counts_ivar_in, gpm_out, log10_blaze_function_out
