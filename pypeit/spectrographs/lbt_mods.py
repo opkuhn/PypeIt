@@ -1156,7 +1156,7 @@ class LBTMODS1RSpectrographProc(LBTMODSSpectrograph):
         tweaks to standard stars so that sensitivity function fits will be
         well behaved.
 
-        This function was adapted from the version in shake_kast.py. It helps, because using trim_std_pixs 
+        This function was adapted from the version in shane_kast.py. It helps, because using trim_std_pixs 
         to trim the spectrum by x1,x2 pixels at either end was not producing the desired results. 
 
         NOTE: if the `trim_std_pixs` parameter is not None, then the standard star spectrum will be only trimmed
@@ -1350,7 +1350,7 @@ class LBTMODS1BSpectrographProc(LBTMODSSpectrograph):
         tweaks to standard stars so that sensitivity function fits will be
         well behaved.
 
-        This function was adapted from the version in shake_kast.py. It helps, because using trim_std_pixs 
+        This function was adapted from the version in shane_kast.py. It helps, because using trim_std_pixs 
         to trim the spectrum by x1,x2 pixels at either end was not producing the desired results. 
 
         NOTE: if the `trim_std_pixs` parameter is not None, then the standard star spectrum will be only trimmed
@@ -1552,7 +1552,7 @@ class LBTMODS2RSpectrographProc(LBTMODSSpectrograph):
         tweaks to standard stars so that sensitivity function fits will be
         well behaved.
 
-        This function was adapted from the version in shake_kast.py. It helps, because using trim_std_pixs 
+        This function was adapted from the version in shane_kast.py. It helps, because using trim_std_pixs 
         to trim the spectrum by x1,x2 pixels at either end was not producing the desired results. 
 
         NOTE: if the `trim_std_pixs` parameter is not None, then the standard star spectrum will be only trimmed
@@ -1746,7 +1746,7 @@ class LBTMODS2BSpectrographProc(LBTMODSSpectrograph):
         tweaks to standard stars so that sensitivity function fits will be
         well behaved.
 
-        This function was adapted from the version in shake_kast.py. It helps, because using trim_std_pixs 
+        This function was adapted from the version in shane_kast.py. It helps, because using trim_std_pixs 
         to trim the spectrum by x1,x2 pixels at either end was not producing the desired results. 
 
         NOTE: if the `trim_std_pixs` parameter is not None, then the standard star spectrum will be only trimmed
