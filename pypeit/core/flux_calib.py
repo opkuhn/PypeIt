@@ -602,26 +602,26 @@ def mask_stellar_hydrogen(wave_star, mask_width=10.0, mask_star=None):
                            9548.8, 9232.2, 9017.8, 8865.3,
                            8752.9, 8667.4, 8600.8, 8547.7,
                            8504.8, 8469.6, 8440.3, 8203.6])
-    for line_pasc in lines_pasc:
-        ipasc = np.abs(wave_star - line_pasc) <= mask_width
-        mask_star[ipasc] = False
+    #for line_pasc in lines_pasc:
+        #ipasc = np.abs(wave_star - line_pasc) <= mask_width
+        #mask_star[ipasc] = False
 
     # Mask Brackett
     log.info(" Masking Brackett")
     # Vacuum Wavelengths from NIST (TEB, 2023-02-10)
     lines_brac = np.array([40522.8, 26258.7, 21661.2, 19446.0,
                            18179.2, 17366.9, 14584.0])
-    for line_brac in lines_brac:
-        ibrac = np.abs(wave_star - line_brac) <= mask_width
-        mask_star[ibrac] = False
+    #for line_brac in lines_brac:
+        #ibrac = np.abs(wave_star - line_brac) <= mask_width
+        #mask_star[ibrac] = False
 
     # Mask Pfund
     log.info(" Masking Pfund")
     # Vacuum Wavelengths from NIST (TEB, 2023-02-10)
     lines_pfund = np.array([74599.0, 46537.8, 37405.8, 32969.8, 22788.0])
-    for line_pfund in lines_pfund:
-        ipfund = np.abs(wave_star - line_pfund) <= mask_width
-        mask_star[ipfund] = False
+    #for line_pfund in lines_pfund:
+        #ipfund = np.abs(wave_star - line_pfund) <= mask_width
+        #mask_star[ipfund] = False
 
     return mask_star
 
