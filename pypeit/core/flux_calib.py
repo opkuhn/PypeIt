@@ -978,8 +978,9 @@ def standard_zeropoint(wave, Nlam, Nlam_ivar, Nlam_gpm, flam_true, mask_recomb=N
         #836.4, 3969.6, 3890.1, 4102.8, 4102.8, 4341.6, 4862.7,   \
         #lines_hydrogen = np.array([5407.0, 6564.6, 8224.8, 8239.2, 8203.6, 8440.3, 8469.6, 8504.8, 8547.7, 8600.8, \
                                    #8667.4, 8752.9, 8865.2, 9017.4, 9229.0, 10049.4, 10938.1, 12818.1, 21655.0])
+        # Commented out the 5407.0, 8224.8 and 8239.2 lines, consistent with their having been commented out in mask_stellar_hydrogen.
         lines_hydrogen = np.array([6564.6, 8203.6, 8440.3, 8469.6, 8504.8, 8547.7, 8600.8, \
-                                   8667.4, 8752.9, 8865.2, 9017.4, 9229.0, 10049.4, 10938.1, 12818.1, 21655.0])
+                                  8667.4, 8752.9, 8865.2, 9017.4, 9229.0, 10049.4, 10938.1, 12818.1, 21655.0])
         for line_hydrogen in lines_hydrogen:
             ihydrogen = np.abs(wave - line_hydrogen) <= balm_mask_wid
             balmer_clean[ihydrogen] = True
